@@ -1,0 +1,15 @@
+<button kendoButton (click)="toggleExpandAll()">Toggle All</button>
+<kendo-treelist [kendoTreeListFlatBinding]="data" [height]="410"
+                idField="id" parentIdField="parentId"
+                [isExpanded]="isExpanded"
+                (expand)="onExpand($event)"
+                (collapse)="onCollapse($event)"
+                scrollable="virtual"
+                [pageSize]="75"
+                [rowHeight]="26"
+>
+    <kendo-treelist-column [expandable]="true" [locked]="true" field="assetName" title="Name" [width]="250">
+    </kendo-treelist-column>
+    <kendo-treelist-column field="ticker" title="Title" [width]="180"></kendo-treelist-column>
+    <kendo-treelist-column field="value.after" title="Phone" [width]="180"></kendo-treelist-column>
+</kendo-treelist>

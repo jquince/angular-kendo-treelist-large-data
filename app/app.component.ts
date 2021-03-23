@@ -1,31 +1,29 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ExpandEvent } from '@progress/kendo-angular-treelist';
-import { Employee, employees } from './employees';
 import { gridData } from './data';
 
 @Component({
     selector: 'my-app',
-    template: `
-        <kendo-treelist [kendoTreeListFlatBinding]="data" [height]="410"
-                idField="id" parentIdField="parentId"
-                [isExpanded]="isExpanded"
-                (expand)="onExpand($event)"
-                (collapse)="onCollapse($event)"
-                >
-            <kendo-treelist-column [expandable]="true" field="assetName" title="Name" [width]="250">
-            </kendo-treelist-column>
-            <kendo-treelist-column field="ticker" title="Title" [width]="180"></kendo-treelist-column>
-            <kendo-treelist-column field="value.after" title="Phone" [width]="180"></kendo-treelist-column>
-        </kendo-treelist>
-    `
+    templateUrl: './app.component.html'
 })
-export class AppComponent {
-    public data: [] = gridData;
-
+export class AppComponent implements OnInit {
+    public data: Array<any> = gridData;
+    private parentIds:Set<number>;
+    private expandAll:boolean;
     /**
      * The field that holds the keys of the expanded items.
      */
-    private expandedIds: string[] = [ 1, 2, 3 ];
+    private expandedIds: Array<number>;
+
+    ngOnInit(): void {
+        this.parentIds = new Set();
+        this.data.forEach(item => {
+            if (item.parentId) {
+                this.parentIds.add(item.parentId);
+            }
+        });
+        this.toggleExpandAll();
+    }
 
     /**
      * A function that determines whether a given item is expanded.
@@ -46,5 +44,15 @@ export class AppComponent {
      */
     public onExpand(args: ExpandEvent): void {
         this.expandedIds.push(args.dataItem.id);
+    }
+
+    toggleExpandAll(): void {
+        this.expandAll = !this.expandAll;
+
+        if (this.expandAll) {
+            this.expandedIds = Array.from(this.parentIds);
+        } else {
+            this.expandedIds = [];
+        }
     }
 }
