@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
-import { ExpandEvent } from '@progress/kendo-angular-treelist';
+import { HttpClient } from '@angular/common/http';
+import { ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
+import { ExpandEvent, TreeListComponent } from '@progress/kendo-angular-treelist';
 import { gridData } from './data';
 
 @Component({
@@ -13,8 +14,11 @@ export class AppComponent implements OnInit {
     /**
      * The field that holds the keys of the expanded items.
      */
-    private expandedIds: Array<number>;
+    expandedIds: Array<number>;
 
+    constructor(http: HttpClient, private cd: ChangeDetectorRef) {
+        // http.get<Array<any>>('/assets/data.json').subscribe(data => this.data = data);
+    }
     ngOnInit(): void {
         this.parentIds = new Set();
         this.data.forEach(item => {

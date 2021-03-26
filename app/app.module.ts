@@ -1,3 +1,4 @@
+import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
@@ -5,7 +6,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ButtonModule } from '@progress/kendo-angular-buttons';
 import { IntlModule } from '@progress/kendo-angular-intl';
 import { TreeListModule } from '@progress/kendo-angular-treelist';
-
+import { TranslateCompiler, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AppComponent } from './app.component';
 
 @NgModule({
@@ -15,7 +16,9 @@ import { AppComponent } from './app.component';
         FormsModule,
         BrowserAnimationsModule,
         TreeListModule,
-        IntlModule
+        TranslateModule.forRoot(),
+        IntlModule,
+        HttpClientModule
     ],
     declarations: [
         AppComponent

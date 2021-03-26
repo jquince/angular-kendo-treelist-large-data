@@ -1,7 +1,7 @@
 <button kendoButton (click)="toggleExpandAll()">Toggle All</button>
 <kendo-treelist [kendoTreeListFlatBinding]="data" [height]="410"
                 idField="id" parentIdField="parentId"
-                [isExpanded]="isExpanded"
+                [isExpanded]="isExpanded" kendoTreeListExpandable [expandedKeys]="expandedIds"
                 (expand)="onExpand($event)"
                 (collapse)="onCollapse($event)"
                 scrollable="virtual"
@@ -10,6 +10,836 @@
 >
     <kendo-treelist-column [expandable]="true" [locked]="true" field="assetName" title="Name" [width]="250">
     </kendo-treelist-column>
-    <kendo-treelist-column field="ticker" title="Title" [width]="180"></kendo-treelist-column>
-    <kendo-treelist-column field="value.after" title="Phone" [width]="180"></kendo-treelist-column>
+    <kendo-treelist-column
+            [title]="'Ticker' | translate"
+            field="ticker"
+            width="120"
+            [lockable]="false"
+    >
+        <ng-template kendoTreeListCellTemplate-not let-dataItem>
+            <mv-security-data-popover
+                    *ngIf="
+                    dataItem.ticker &&
+                        dataItem.calculationSecurityType !== 'CASH' &&
+                        !dataItem.placeholderTarget;
+                    else noLink
+                "
+                    [assetID]="dataItem.portfolioEditorAssetInfo.assetId"
+            >
+                <span class="text-link">{{ dataItem.ticker }}</span>
+            </mv-security-data-popover>
+            <ng-template #noLink>{{ dataItem.ticker }}</ng-template>
+        </ng-template>
+    </kendo-treelist-column>
+
+    <kendo-treelist-column
+            [title]="'PriceUSD' | translate"
+            field="displayPrice"
+            class="number-column"
+            width="120"
+            [lockable]="false"
+            [filterable]="false"
+    >
+        <ng-template kendoTreeListCellTemplate-not let-dataItem>
+            {{
+            dataItem.displayPrice | mvAssetDecimal: 'lastPrice':dataItem.calculationSecurityType
+            }}
+        </ng-template>
+    </kendo-treelist-column>
+
+    <kendo-treelist-column
+            [title]="'AccountNumbers' | translate"
+            field="custodianAccountNumbers"
+            width="150"
+            [lockable]="false"
+    >
+        <ng-template
+                kendoTreeListFilterMenuTemplate
+                let-filter="filter"
+                let-column="column"
+                let-filterService="filterService"
+                let-dataItem
+        >
+            <mv-kendo-multi-check-filter
+                    [data]="gridData"
+                    [field]="column.field"
+                    [currentFilter]="filter"
+                    [filterService]="filterService"
+                    [arrayField]="true"
+            ></mv-kendo-multi-check-filter>
+        </ng-template>
+        <ng-template kendoTreeListCellTemplate-not let-dataItem>
+            {{ dataItem.custodianAccountNumbers && dataItem.custodianAccountNumbers.join(', ') }}
+        </ng-template>
+    </kendo-treelist-column>
+
+    <kendo-treelist-column-group
+            [title]="'ValueUSD' | translate"
+            width="575"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                field="value.before"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="dataItem.value.before | mvAssetDecimal: 'default'"
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.value.before">^</span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Target' | translate"
+                field="value.target"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="dataItem.value.target | mvAssetDecimal: 'default'"
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                field="value.after"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable
+                        [edit]="isCellEditable('value.after', dataItem)"
+                        [mvPortfolioEditorGridCellHighlighter]="dataItem"
+                        [changeDetectionField]="dataItem.value.after"
+                >
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.value.after | mvAssetDecimal: 'default'"
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Drift' | translate"
+                field="value.drift"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('value.drift', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.value.drift | mvAssetDecimal: 'default'"
+                    ></span>
+                    <span *ngIf="dataItem.hasOpenOrders && dataItem.value.drift">^</span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                field="value.change"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('value.change', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.value.change | mvAssetDecimal: 'default'"
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column
+            [title]="'CostBasisUSD' | translate"
+            field="costBasis"
+            class="number-column"
+            width="150"
+            [hidden]="true"
+            [lockable]="false"
+            [filterable]="false"
+    >
+        <ng-template kendoTreeListCellTemplate-not let-dataItem>
+            <span [mvNegativeNumber]="dataItem.costBasis | mvAssetDecimal: 'default'"></span>
+        </ng-template>
+    </kendo-treelist-column>
+
+    <kendo-treelist-column-group
+            [title]="'UnrealizedGLDollar' | translate"
+            width="330"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'STGL' | translate"
+                field="unrealizedGainLoss.shortTerm"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.unrealizedGainLoss.shortTerm | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'LTGL' | translate"
+                field="unrealizedGainLoss.longTerm"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.unrealizedGainLoss.longTerm | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Total' | translate"
+                field="unrealizedGainLoss.total"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.unrealizedGainLoss.total | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column-group
+            [title]="'ExpectedGLDollar' | translate"
+            width="330"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'STGL' | translate"
+                field="expectedGainLoss.shortTerm"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.expectedGainLoss.shortTerm | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'LTGL' | translate"
+                field="expectedGainLoss.longTerm"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.expectedGainLoss.longTerm | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Total' | translate"
+                field="expectedGainLoss.total"
+                class="number-column"
+                width="110"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="dataItem.expectedGainLoss.total | mvAssetDecimal: 'default'"
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+    <kendo-treelist-column-group [title]="'PercentOfParent' | translate" width="575" [lockable]="false">
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                field="percentOfParent.before"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="
+                        dataItem.percentOfParent?.before | mvAssetDecimal: 'default'
+                    "
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.percentOfParent">^</span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Target' | translate"
+                field="percentOfParent.target"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="
+                        dataItem.percentOfParent?.target | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                field="percentOfParent.after"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable
+                        [edit]="isCellEditable('percentOfParent.after', dataItem)"
+                        [mvPortfolioEditorGridCellHighlighter]="dataItem"
+                        [changeDetectionField]="dataItem.percentOfParent?.after"
+                >
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="
+                            dataItem.percentOfParent?.after | mvAssetDecimal: 'default'
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Drift' | translate"
+                field="percentOfParent.drift"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('percentOfParent.drift', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="
+                            dataItem.percentOfParent?.drift | mvAssetDecimal: 'default'
+                        "
+                    ></span>
+                    <span *ngIf="dataItem.hasOpenOrders && dataItem.percentOfParent?.drift">^</span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                field="percentOfParent.change"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('percentOfParent.change', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="
+                            dataItem.percentOfParent?.change | mvAssetDecimal: 'default'
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+    <kendo-treelist-column-group [title]="'PercentOfTotal' | translate" width="575" [lockable]="false">
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                field="percent.before"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="dataItem.percent.before | mvAssetDecimal: 'default'"
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.percent.before">^</span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Target' | translate"
+                field="percent.target"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                        [mvNegativeNumber]="dataItem.percent.target | mvAssetDecimal: 'default'"
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                field="percent.after"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable
+                        [edit]="isCellEditable('percent.after', dataItem)"
+                        [mvPortfolioEditorGridCellHighlighter]="dataItem"
+                        [changeDetectionField]="dataItem.percent.after"
+                >
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.percent.after | mvAssetDecimal: 'default'"
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Drift' | translate"
+                field="percent.drift"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('percent.drift', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.percent.drift | mvAssetDecimal: 'default'"
+                    ></span>
+                    <span *ngIf="dataItem.hasOpenOrders && dataItem.percent.drift">^</span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                field="percent.change"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('percent.change', dataItem)">
+                    <span
+                            [ngClass]="{ 'k-treelist-group': dataItem.breakdownRow }"
+                            [mvNegativeNumber]="dataItem.percent.change | mvAssetDecimal: 'default'"
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column-group
+            [title]="'QuantityCurrentFaceUSD' | translate"
+            width="575"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                field="quantity.before"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.quantity.before
+                            | mvAssetDecimal
+                                : dataItem.quantityField
+                                : dataItem.calculationSecurityType
+                    "
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.quantity.before">^</span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Target' | translate"
+                field="quantity.target"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.quantity.target
+                            | mvAssetDecimal
+                                : dataItem.quantityField
+                                : dataItem.calculationSecurityType
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                field="quantity.after"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable
+                        [edit]="isCellEditable('quantity.after', dataItem)"
+                        [mvPortfolioEditorGridCellHighlighter]="dataItem"
+                        [changeDetectionField]="dataItem.quantity.after"
+                >
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.quantity.after
+                                | mvAssetDecimal
+                                    : dataItem.quantityField
+                                    : dataItem.calculationSecurityType
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Drift' | translate"
+                field="quantity.drift"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('quantity.drift', dataItem)">
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.quantity.drift
+                                | mvAssetDecimal
+                                    : dataItem.quantityField
+                                    : dataItem.calculationSecurityType
+                        "
+                    ></span>
+                    <span *ngIf="dataItem.hasOpenOrders && dataItem.quantity.drift">^</span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                field="quantity.change"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('quantity.change', dataItem)">
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.quantity.change
+                                | mvAssetDecimal
+                                    : dataItem.quantityField
+                                    : dataItem.calculationSecurityType
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column-group
+            [title]="'OriginalFace' | translate"
+            width="575"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                field="originalFace.before"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.originalFace.before
+                            | mvAssetDecimal: 'originalFace':dataItem.calculationSecurityType
+                    "
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.originalFace.before">^</span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Target' | translate"
+                field="originalFace.target"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.originalFace.target
+                            | mvAssetDecimal: 'originalFace':dataItem.calculationSecurityType
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                field="originalFace.after"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable
+                        [edit]="isCellEditable('originalFace.after', dataItem)"
+                        [mvPortfolioEditorGridCellHighlighter]="dataItem"
+                        [changeDetectionField]="dataItem.originalFace.after"
+                >
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.originalFace.after
+                                | mvAssetDecimal: 'originalFace':dataItem.calculationSecurityType
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Drift' | translate"
+                field="originalFace.drift"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('originalFace.drift', dataItem)">
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.originalFace.drift
+                                | mvAssetDecimal: 'originalFace':dataItem.calculationSecurityType
+                        "
+                    ></span>
+                    <span *ngIf="dataItem.hasOpenOrders && dataItem.originalFace.drift">^</span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                field="originalFace.change"
+                class="number-column"
+                width="115"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <mv-kendo-editable [edit]="isCellEditable('originalFace.change', dataItem)">
+                    <span
+                            [mvNegativeNumber]="
+                            dataItem.originalFace.change
+                                | mvAssetDecimal: 'originalFace':dataItem.calculationSecurityType
+                        "
+                    ></span>
+                </mv-kendo-editable>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column
+            [title]="'DaysToSettle' | translate"
+            field="daysToSettle"
+            width="150"
+            format="{0:n0}"
+            [hidden]="true"
+            [lockable]="false"
+            [filterable]="false"
+    ></kendo-treelist-column>
+
+    <kendo-treelist-column-group
+            [title]="'EstimatedAnnualizedIncome' | translate"
+            width="345"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'Before' | translate"
+                class="number-column"
+                field="annualizedIncomeDollarAmount.before"
+                width="115"
+                [hidden]="true"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.annualizedIncomeDollarAmount.before | mvAssetDecimal: 'default'
+                    "
+                ></span>
+                <span *ngIf="dataItem.hasOpenOrders && dataItem.annualizedIncomeDollarAmount.before"
+                >^</span
+                >
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'After' | translate"
+                class="number-column"
+                field="annualizedIncomeDollarAmount.after"
+                width="115"
+                [hidden]="true"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.annualizedIncomeDollarAmount.after | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+
+        <kendo-treelist-column
+                [title]="'Change' | translate"
+                class="number-column"
+                field="annualizedIncomeDollarAmount.change"
+                width="115"
+                [hidden]="true"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.annualizedIncomeDollarAmount.change | mvAssetDecimal: 'default'
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column-group
+            [title]="'SecurityInformation' | translate"
+            width="400"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'Yield' | translate"
+                class="number-column"
+                field="yield"
+                width="120"
+                format="{0:p2}"
+                [hidden]="true"
+                [filterable]="false"
+        >
+        </kendo-treelist-column>
+
+        <kendo-treelist-column
+                [title]="'MaturityDate' | translate"
+                field="maturityDate"
+                width="130"
+                [hidden]="true"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span>{{ dataItem.maturityDate | mvDate }}</span>
+            </ng-template>
+        </kendo-treelist-column>
+
+        <kendo-treelist-column
+                [title]="'PaydownDate' | translate"
+                field="paydownDate"
+                width="150"
+                [hidden]="true"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span>{{ dataItem.paydownDate | mvDate }}</span>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
+
+    <kendo-treelist-column-group
+            [title]="'PriceUSD' | translate"
+            width="640"
+            [hidden]="true"
+            [lockable]="false"
+    >
+        <kendo-treelist-column
+                [title]="'CurrentPrice' | translate"
+                field="price"
+                class="number-column"
+                width="145"
+                [lockable]="false"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                {{ dataItem.price | mvAssetDecimal: 'lastPrice':dataItem.calculationSecurityType }}
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'PriorClosingPrice' | translate"
+                field="priorClosingPrice"
+                class="number-column"
+                width="145"
+                [lockable]="false"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="
+                        dataItem.priorClosingPrice
+                            | mvAssetDecimal: 'lastPrice':dataItem.calculationSecurityType
+                    "
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'ChangeFromPriorClose' | translate"
+                field="changeFromPriorClose"
+                class="number-column"
+                width="175"
+                [lockable]="false"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span
+                        [mvNegativeNumber]="dataItem.changeFromPriorClose | mvAssetDecimal: 'default'"
+                ></span>
+            </ng-template>
+        </kendo-treelist-column>
+        <kendo-treelist-column
+                [title]="'PriceTime' | translate"
+                field="priceTime"
+                width="175"
+                [lockable]="false"
+                [filterable]="false"
+        >
+            <ng-template kendoTreeListCellTemplate-not let-dataItem>
+                <span>{{ dataItem.priceTime | mvDate: 'MMM d, h:mm a z':'America/New_York' }}</span>
+            </ng-template>
+        </kendo-treelist-column>
+    </kendo-treelist-column-group>
 </kendo-treelist>
