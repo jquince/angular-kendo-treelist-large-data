@@ -1,5 +1,4 @@
-import { HttpClient } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ExpandEvent, TreeListComponent } from '@progress/kendo-angular-treelist';
 import { gridData } from './data';
 
@@ -8,6 +7,7 @@ import { gridData } from './data';
     templateUrl: './app.component.html'
 })
 export class AppComponent implements OnInit {
+    @ViewChild(TreeListComponent) treeList: TreeListComponent;
     public data: Array<any> = gridData;
     private parentIds:Set<number>;
     private expandAll:boolean;
@@ -16,9 +16,6 @@ export class AppComponent implements OnInit {
      */
     expandedIds: Array<number>;
 
-    constructor(http: HttpClient, private cd: ChangeDetectorRef) {
-        // http.get<Array<any>>('/assets/data.json').subscribe(data => this.data = data);
-    }
     ngOnInit(): void {
         this.parentIds = new Set();
         this.data.forEach(item => {
@@ -58,5 +55,6 @@ export class AppComponent implements OnInit {
         } else {
             this.expandedIds = [];
         }
+        //this.treeList.updateView();
     }
 }
